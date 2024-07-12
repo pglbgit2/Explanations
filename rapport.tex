@@ -17,6 +17,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{pgffor}
 \usepackage[font=small,labelfont=bf]{caption} % Required for specifying captions to tables and figures
+\newacronym{os}{OS}{Operating System (système d'exploitation)}
 
 \newcommand{\cmark}{\ding{51}} 
 \newcommand{\xmark}{\ding{55}}
@@ -54,6 +55,7 @@
 \newacronym{cisc}{CISC}{Complex Instruction Set Computer}
 \newacronym{rtos}{RTOS}{Real Time Operating System}
 \newacronym{qemu}{QEMU}{Quick Emulator}
+\newacronym{dos}{DOS}{Denial Of Service}
 \newacronym{gdb}{GDB}{GNU Debugger}
 \newacronym{mpu}{MPU}{Memory Protection Unit}
 \newacronym{ecu}{ECU}{Electronic Control Unit}
@@ -158,10 +160,10 @@
 \addcontentsline{toc}{section}{Content Table}
 
 \section{Introduction}
-In this document, you will find condensed information about \Gls{cheri} to give a basic context of the hardware protection, some complementary explanations of the solutions from the \href{https://ctsrd-cheri.github.io/cheri-exercises/cover/index.html}{Adversarial CHERI Exercises and Missions} as well as some explanations of self-made tests inspired by CHERI Introduction to C/C++ \cite{watson2020cheri}. 
+In this document, you will find condensed information about \Gls{cheri} to give a basic context of the hardware protection, some complementary explanations of the solutions from the \href{https://ctsrd-cheri.github.io/cheri-exercises/cover/index.html}{Adversarial CHERI Exercises and Missions} as well as some explanations of self-made tests inspired by CHERI Introduction to C/C++ \cite{watson2020cheri}, and finally some explanations concerning the Cyberphys demonstration. 
 If you want to run these exercises yourself, you will need to follow the steps of this \href{https://ctsrd-cheri.github.io/cheri-faq/#how-can-i-emulate-a-cheri-enabled-environment}{official CHERI tutorial} on how to get CHERI environment. This will help you emulate using \Gls{qemu} either a \Gls{cheribsd} running on \Gls{cheri-risc-v} or \Gls{morello} environment. Take the \Gls{morello} environment to install useful packages such as llvm, gdb, python, nano, vim and many others.
 These exercises will compare the behavior of CHERI protected environment and classic environment (\Gls{risc-v}).
-
+Note: This is not a research paper and does not have the vocation to be published. It is an explanation document.
 These CHERI exercises requires minimal knowledge of CHERI. The following section give essential information on the topic.
 
 \printnoidxglossaries
@@ -1537,6 +1539,201 @@ That means its possible to call the secret function from the duplicated object d
 To conclude, this is one exemple of a usage of how a buffer overflow followed by the utilisation of an offset can be problematic.
 However, this exemple is still very unrealistic. C code isn't usually write like this and C++ class don't have attributes that are function pointer leading to their methods: they have a virtual method table that all instance of a class can access using a single pointer which is before all attributes. Meaning it would be impossible under CHERI protection to modify a method pointer. This could still be problematic if using a pointer to pointer as an attribute and calculating an offset with it, but it would be not probable that the exploit of such a vulnerability leads to arbitrary method execution, as in this case.
 There are still two subtleties: even if a vulnerability exploit will fail, attackers can provoke faults at will, meaning handling of those faults have to be considered. If the usage of an offset between two pointer, one that could be overflowed, the application could encounter problems that are not handled, leading to DOS (Denial Of Service).
+
+
+\section{Cyberphys Demonstration}
+
+This application is positioned in an  context using a CAN data bus. The application controls a user's input (brakes, steering wheel) and must react accordingly. The data is transmitted via a CAN bus.
+The application is coded entirely in C.
+It is assumed that an attacker has access to this data bus. The attack scenario under consideration poses problems of availability, integrity and confidentiality because the J1939 protocol used in this application is vulnerable to a buffer overflow attack, enabling the attacker, after successful exploitation of the vulnerability, to take total control of the vehicle, among other things. The demonstration shows that on a conventional system, the system is compromised, but on a system benefiting from CHERI protection, a security exception is lifted. \\
+The application runs in two environments: a FreeRTOS system on RISC-V architecture and a CHERI-FreeRTOS system on CHERI-RISC-V architecture. The application is called Cyberphys.
+\begin{figure}
+        \begin{center}
+                \begin{tikzpicture}
+
+                % Draw the CAN bus line
+                \draw[thick] (0, 0) -- (13, 0);
+                
+                % Draw the components (rectangles) connected to the bus
+                \foreach \x in {1, 4, 7, 10, 13} {
+                    \draw[thick] (\x, 0) -- (\x, 1); % Connect component to bus
+                    \draw[thick] (\x-1.2, 1) rectangle (\x+1.2, 3); % Draw component
+                }
+                \draw[thick] (1, 0) -- (1, -1); % Connect component to bus
+                \draw[thick] (-1.2, -1) rectangle (1.2, -3); % Draw component
+
+                % Add labels to components
+                \node at (1, 2) {Breaks};
+                \node at (4, 2) {accelerator};
+                \node at (7, 2) {motor};
+                \node at (10, 2) {ABS};
+                \node at (13, 2) {Volant};
+                \node at (-1.5, 2) {Sensors};
+                \node[align=center] at (0, -2) {Control Unit \\ (application)};
+                \draw[thick, red] (0, 0) -- (1, 0) -- (1, -1);
+                \node[red] at (4,-1) {buffer overflow paquet};
+
+                \end{tikzpicture}
+        \end{center}
+        \caption{Bus CAN} 
+		\label{fig:canbus}
+
+\end{figure}
+
+
+A remark raised by Dr. Hesham Almatory in his thesis \cite{almatary2022compartos} is that the raising of an exception effectively prevents the exploitation of a vulnerability aimed at a subtle objective such as the execution of arbitrary code, but does not prevent the \Gls{dos}.
+In other words, the system is not corrupted (the integrity and confidentiality of the system are preserved) when a security exception is raised, but stopped (availability is non-existent). Losing control of a vehicle can be problematic for a number of obvious reasons. Dr Hesham Almatory's first solution, which he describes as naive, is to restart the entire system. According to his experiments, this takes approximately two seconds. That may not sound like much, but in an emergency braking situation it can be problematic. This could be a scenario involving multiples attacks: the attacker can carry out his attack in a loop and force an immediate reboot as soon as the system becomes functional again. 
+The second solution proposed by Dr Hesham consists of compartmentalising the application using a method of his own invention called CompartOS, which is based on CHERI capabilities and is carried out automatically during the linking stage carried out by the compiler. Three solutions are proposed: restarting the offending compartment (requires minimal implementation effort, but is not always possible), modifying the code to include error handling (requires a small implementation effort but requires knowledge of the errors that can be handled) or 'killing' the compartment (this solution is only possible in cases where the compartment is not crucial, such as a music player). Depending on the type of problem, each of the three solutions may be necessary. In this case, error handling is used. \\ \\
+
+By using simple error handling, consisting of stopping only the faulty compartment and recreating it in another memory area, the compartment returns to a functional state in thirty micro-seconds, however, the allocated memory is not released and this can lead to a exhaustion of memory ressources in the long term. With a little implementation effort, it is possible to specify the release of allocated memory and thus avoid the backlog. This takes sixty microseconds. In this way, system availability is maintained and the effectiveness of CompartOS based on CHERI protections is demonstrated.
+The application used in the demonstration is not complete (it does not simulate all the components of a vehicle): it is a simplified version comprising only the management of data from the CAN bus, using the J1939 protocol, as well as a task updating the information received from the sensors (non-existent in this case). The aim is simply to demonstrate the presence and possible exploitation of a buffer overflow without the CHERI protection.
+
+\newcommand{\drawstack}[3]{
+        \draw (#1,#2) rectangle (#1+4,#2+#3);   
+        \foreach \v in {1, ..., #3}{
+                \draw[-] (#1,\v+#2) -- (#1+4,#2+\v);
+        }
+}
+\newcommand{\drawdemostack}[2]{
+        \drawstack{#1}{#2}{4};
+        \drawstack{#1}{#2+5}{3};
+
+        \node at (#1+2,#2+0.5) {...};
+        \node at (2+#1,#2+7.5) {...};
+        \node at (2+#1,6.5+#2) {buffer global};
+        \node at (2+#1,1.5+#2) {buffer vulnérable};
+        \node at (2+#1,#2+5.5) {...};
+}
+\begin{figure}
+        \begin{center}
+                \begin{tikzpicture}[scale=0.75]
+                       \drawdemostack{0}{0}
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 5) -- (0, 8) node [black,midway,xshift=-2.5cm] {Global Variable};
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 1) -- (0, 4) node [black,midway,xshift=-2.5cm] {Tasks memory};
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 0) -- (0, 1) node [black,midway,xshift=-2.4cm] {Unused Memory};
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (4, 2) -- (4, 1) node [black,midway,xshift=3.2cm] {Protocol J1939 variables};
+                \end{tikzpicture}
+        \end{center}
+        \caption{Demonstration: Initial State} 
+		\label{fig:demo_init}
+
+\end{figure}
+In the initial state, \ref{fig:demo_init} and throughout execution, the program's memory space is divided into three parts: the tasks, the global variables and the variables used in the functions called by the tasks.
+
+\begin{figure}
+        \begin{center}
+                \begin{tikzpicture}[scale=0.75]
+                        \fill [red] (6,0) rectangle (10,2);
+                        \draw[->] (6,1.5) -- (4,1.5);
+                        \draw[black] (6,0) rectangle (10,2);   
+                        \drawdemostack{0}{0}
+                        \node at (8,1) {message};
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 5) -- (0, 8) node [black,midway,xshift=-2.5cm] {Global Variables};
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 1) -- (0, 4) node [black,midway,xshift=-2.5cm] {Tasks Memory};
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 0) -- (0, 1) node [black,midway,xshift=-2.4cm] {Unused Memory};
+                \end{tikzpicture}
+        \end{center}
+        \caption{Demonstration: Message Reception} 
+		\label{fig:demo_paquet}
+
+\end{figure}
+When the \ref{fig:demo_paquet} message is received, it is reconstituted from the multiple packets requiring a certain format sent in the CAN BUS. 
+
+\begin{figure}
+        \begin{center}
+                \begin{tikzpicture}[scale=0.75]
+                        \fill [red] (6,0) rectangle (10,2);
+                        \draw[->] (6,1.5) -- (4,1.5);
+                        \node at (8,1) {message};
+                        \draw[black] (6,0) rectangle (10,2);   
+                        \fill [red] (0,0) rectangle (4,2);
+                        \drawdemostack{0}{0}
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 5) -- (0, 8) node [black,midway,xshift=-2.5cm] {Global Variables};
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 1) -- (0, 4) node [black,midway,xshift=-2.5cm] {Tasks Memory};
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 0) -- (0, 1) node [black,midway,xshift=-2.4cm] {Unused Mmeory};
+                \end{tikzpicture}
+        \end{center}
+        \caption{Demonstration: First Buffer Overflow} 
+		\label{fig:demo_overflow}
+
+	\end{figure}
+
+The first buffer overflow \ref{fig:demo_overflow} occurs when the buffer in which the function implementing the J1939 protocol copies the entire reci message without checking its size. On a conventional FreeRTOS system, the buffer overflow goes unnoticed.
+On a CHERI-FreeRTOS system, the buffer overflow attempt will raise a security exception due to the buffer being bound. On a compartmentalised system, the error handling will call a handler which will free the memory used by the protocol and instantiate it again.
+
+\begin{figure}
+        \begin{center}
+                \begin{tikzpicture}[scale=0.75]
+                        \draw[->] (4,1.5) -- (5,1.5) -- (5,6.5) -- (5,6.5) -- (4,6.5);
+*                        \fill [red] (0,0) rectangle (4,2);
+*                        \fill [red] (0,7) rectangle (4,5);
+
+                        \drawdemostack{0}{0}
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 5) -- (0, 8) node [black,midway,xshift=-2.5cm] {Global Variables};
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 1) -- (0, 4) node [black,midway,xshift=-2.5cm] {Tasks Memory};
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 0) -- (0, 1) node [black,midway,xshift=-2.4cm] {Unused Memory};
+                \end{tikzpicture}
+        \end{center}
+        \caption{Demonstration: Copy and second Buffer Overflow} 
+		\label{fig:demo_copy}
+
+\end{figure}
+The next step, when the buffer is copied to a global variable in an uncontrolled way \ref{fig:demo_copy}, where the exploitation of the vulnerability makes sense, therefore does not occur on a CHERI-FreeRTOS system. On the other hand, on a FreeRTOS system, the buffer will overflow onto global variables and replace their values. In the version of the demonstration that I have produced, this simply stops the execution of the program by replacing used variables that are supposed to have certain values, causing a fault when used. In the original demonstration, the application included an authentication key, vulnerable to a buffer overflow on the global buffer, which was used to accept instructions during over-the-air updates, giving the attacker total control of the vehicle. 
+\newcommand{\threeRect}[5]{
+        \draw (#1,#2) rectangle (#1+5,#2+1);
+        \draw (#1,#2+1) rectangle (#1+5,#2+2);
+        \draw (#1,#2+2) rectangle (#1+5,#2+3);
+        \node at (#1+2.5,0.5) {#3};
+        \node at (#1+2.5,1.5) {#4};
+        \node at (#1+2.5,2.5) {#5};
+
+}
+\begin{figure}
+        \begin{center}
+                \begin{tikzpicture}[scale=0.75]
+                        \threeRect{6}{0}{CHERI-RISC-V}{CHERI-FreeRTOS}{Cyberphys};
+                        \threeRect{-6}{0}{RISC-V}{FreeRTOS}{Cyberphys};
+                        \threeRect{0}{0}{Architecture}{\acrshort{os}}{Application};
+                        \draw[->, thick] (0, -3.5) -- (0, -2)-- (-3, -2) --(-3, 0);
+                        \draw[->, thick] (0, -2)-- (8, -2) --(8, 0);
+                        \draw[->, thick, brown] (11, -1.5) -- (11, -1) -- (12, -1) -- (12, 4)-- (8, 4)-- (8, 3);
+                        \draw[->, thick, brown] (8, 4) --(-3, 4)--(-3, 3);
+                        \draw[->, thick, brown] (-5, -7) --(-4, -7);
+                        \draw[->, thick] (-5, -8) --(-4, -8);
+
+                        \filldraw[fill=white] (0,-2) ellipse (2.5cm and 1 cm);
+                        \draw[->, thick] (3, -4.5)-- (6, -4.5) --(6, -7);
+
+                        \filldraw[fill=white] (6,-4.5) ellipse (2.5cm and 1 cm);
+
+                        \node at (6,-4.5) {Clang version 16};
+                        \node at (11,-4.5) {Cheribuild};
+                        \draw[->, thick, green] (11, -4) -- (11, -2.5);
+                        \draw[->, thick, green] (11, -3) -- (2, -3) -- (2, -3.5);
+                        \draw[->, thick, green] (-5, -9) -- (-4, -9);
+
+                        \node at (0,-2) {Clang version 13};
+                        \node[align=center] at (6,-8) {Debogger GDB\\ (RISC-V architecture)};
+                        \node at (11,-2) {QEMU};
+                        \node[brown] at (0.6,-7) {emulates using cross-compiled binaries};
+                        \node[green] at (-1.5,-9) {build and run tools};
+
+                        \node at (-0.2,-8) {cross-compile code into binaries};
+
+                        \node[align=center] at (0,-4.5) {Cross Compiler LLVM};
+                        \draw (-3,-5.5) rectangle (3,-3.5);
+                        \draw (9.5,-5) rectangle (12.5,-4);
+                        \draw (9.5,-2.5) rectangle (12.5,-1.5);
+                        %\twoGear{0}{-4}
+                \end{tikzpicture}
+        \end{center}
+        \caption{Demonstration Build} 
+		\label{fig:cyberphys}
+
+\end{figure}
+
+
+
 \clearpage 
 \bibliographystyle{plain}
 \bibliography{source}
