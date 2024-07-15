@@ -1,0 +1,12 @@
+create
+toot
+call
+f4
+toot
+something
+something
+call
+f3
+toot
+debug
+exit

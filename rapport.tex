@@ -191,11 +191,9 @@ A CHERI pointer (also called a capability) is:
 	\item[Rights] of a pointer to a memory area are those of read, write value and capabilities (pointers) contained in that memory location. It depends on the architectural implementation but some common rights are execution, system calls and seal or unseal the capability.
 	\item[An object type] is used to indicate the size of the object pointed to. If this value is set to -1, the pointer is no longer valid. It can be used by the compiler to fix bounds.
  \end{description}
- \begin{figure}[h!]
 	\centering
-	\caption{CHERI Pointers from An Introduction to CHERI paper}
-\end{figure}
-\begin{center}
+\begin{figure}
+	\begin{center}
 	\begin{tikzpicture}
 		% Draw the main rectangle for the full-precision address
 		\draw (0,0) rectangle (12,2);
@@ -234,6 +232,9 @@ A CHERI pointer (also called a capability) is:
 
 	\end{tikzpicture}
 \end{center}
+\caption{CHERI Pointers from An Introduction to CHERI paper}
+\label{fig:ptr}
+\end{figure}
 
  It is possible to display a pointer with more information about a CHERI system. For example, the following value is a pointer: 0x225300 [rwRW,0x225300-0x225301]. The address pointed to is: 0x225300. 
  The bounds are from 0x225300 to 0x225301. The upper bound is not included. It is therefore a pointer to a single byte, in this case a char.
@@ -254,22 +255,23 @@ CHERI rights may be encoded differently depending on hardware implementation. Fo
 In a study carried out by Microsoft in 2020 \cite{joly2020security}, a group of researchers studied which vulnerabilities were affected by CHERI protection. (see graphics \nameref{sec:tab} \nameref{sec:graph})
 \begin{figure}[h!]
 	\centering
+	
+	\includegraphics[scale=0.5]{images/cheriMitigationTab.png}
 	\caption{CHERI protection tab (Microsoft study)\cite{joly2020security}}
 	\label{sec:tab}
-	\includegraphics[scale=0.5]{images/cheriMitigationTab.png}
 \end{figure}
 \begin{figure}[h!]
 	\centering
+	
+	\includegraphics[scale=0.4]{images/mitigationCHERIGraph.png}
 	\caption{CHERI protection graph (Microsoft study)\cite{joly2020security}}
 	\label{sec:graph}
-	\includegraphics[scale=0.4]{images/mitigationCHERIGraph.png}
 \end{figure}
-\\ \\
 CHERI therefore offers complete protection against write and read accesses outside the limits imposed (spatial security property), possible protection against the use of freed memory (temporal safety of pointer to freed memory zone) and CHERI offers no protection against integer overflows (when an integer is incremented until it reaches the maximum value calculable with 4 bytes, it is reset to 0). 
-\\ \\
+\\
 The study is no longer completely up-to-date, as CHERI now offers experimental protection against problems caused by memories that are not initialized correctly. It is possible to include options during compilation to force an initialization to 0 of all uninitialized bytes (NULL for a pointer).
 In addition, temporal protections have been integrated into CHERI, as described in the article Cornucopia: Temporal Safety for CHERI Heaps \cite{filardo2020cornucopia}, which forbids the memory allocator to allocate a memory zone which is still pointed by a valid pointer, and allows pointers to free zones to be "sweep" from memory using a specific operation, allowing re-use of those zone. It does not prevent use after free until sweeping, however.
-\\ \\
+\\
 According to a report on the compartmentalization provided by CHERI \cite{almatary2022compartos}, it is possible to use CHERI to implement strong compartmentalization in an embedded system, so that if an attacker were to exploit a vulnerability, the ability to interfere with the normal behavior of the system that he would obtain would be reduced compared with a conventional system. Indeed, even assuming the entirety of a non-critical compartment to be under the control of an attacker, the study demonstrates the normal operation of an embedded system using \Gls{cheri-freertos}, a \Gls{freertos} system using CHERI protections and CompartOS (the compartmentalisation system dealt with in the study). On a standard \Gls{freertos} system running on \Gls{risc-v} architecture, the exploitation of a vulnerability is successful and the attacker can influence the integrity, confidentiality and availability of the data and the operation of the system. With CHERI protections under \Gls{cheri-freertos} running on \Gls{cheri-risc-v}, the attack is intercepted but the raising of an untreated error forces a brutal restart of the system, which takes two seconds, affecting the availability of the system playing a critical role (in the study, the system under attack was the brake system), with the use of CompartOS, the critical compartment is restarted in 60 microseconds and the malicious compartment is "killed". This study show different usage of compartmentalization, one enforced automatically using library linkage, another adding a custom handler which require knowledge of the compartmentalization process and implementation efforts but is necessary when dealing with a critical compartment (the study uses fault handling in different context: the main application, a non critical compartment and a critical compartment which is used by the main application).
 A study carried out on Spectre-type attacks \cite{fuchs2021developing} showed that CHERI did not provide any protection against these attacks. Spectre-type attacks use an optimization flaw in the processors, which is not directly CHERI's area of intervention but are still considered memory vulnerabilities exploitation.
 \clearpage
@@ -1542,7 +1544,7 @@ There are still two subtleties: even if a vulnerability exploit will fail, attac
 
 
 \section{Cyberphys Demonstration}
-
+\subsection{Demonstration context}
 This application is positioned in an  context using a CAN data bus. The application controls a user's input (brakes, steering wheel) and must react accordingly. The data is transmitted via a CAN bus.
 The application is coded entirely in C.
 It is assumed that an attacker has access to this data bus. The attack scenario under consideration poses problems of availability, integrity and confidentiality because the J1939 protocol used in this application is vulnerable to a buffer overflow attack, enabling the attacker, after successful exploitation of the vulnerability, to take total control of the vehicle, among other things. The demonstration shows that on a conventional system, the system is compromised, but on a system benefiting from CHERI protection, a security exception is lifted. \\
@@ -1567,7 +1569,7 @@ The application runs in two environments: a FreeRTOS system on RISC-V architectu
                 \node at (4, 2) {accelerator};
                 \node at (7, 2) {motor};
                 \node at (10, 2) {ABS};
-                \node at (13, 2) {Volant};
+                \node at (13, 2) {Throddle};
                 \node at (-1.5, 2) {Sensors};
                 \node[align=center] at (0, -2) {Control Unit \\ (application)};
                 \draw[thick, red] (0, 0) -- (1, 0) -- (1, -1);
@@ -1580,10 +1582,10 @@ The application runs in two environments: a FreeRTOS system on RISC-V architectu
 
 \end{figure}
 
-
+\subsection{Demonstration Theory}
 A remark raised by Dr. Hesham Almatory in his thesis \cite{almatary2022compartos} is that the raising of an exception effectively prevents the exploitation of a vulnerability aimed at a subtle objective such as the execution of arbitrary code, but does not prevent the \Gls{dos}.
 In other words, the system is not corrupted (the integrity and confidentiality of the system are preserved) when a security exception is raised, but stopped (availability is non-existent). Losing control of a vehicle can be problematic for a number of obvious reasons. Dr Hesham Almatory's first solution, which he describes as naive, is to restart the entire system. According to his experiments, this takes approximately two seconds. That may not sound like much, but in an emergency braking situation it can be problematic. This could be a scenario involving multiples attacks: the attacker can carry out his attack in a loop and force an immediate reboot as soon as the system becomes functional again. 
-The second solution proposed by Dr Hesham consists of compartmentalising the application using a method of his own invention called CompartOS, which is based on CHERI capabilities and is carried out automatically during the linking stage carried out by the compiler. Three solutions are proposed: restarting the offending compartment (requires minimal implementation effort, but is not always possible), modifying the code to include error handling (requires a small implementation effort but requires knowledge of the errors that can be handled) or 'killing' the compartment (this solution is only possible in cases where the compartment is not crucial, such as a music player). Depending on the type of problem, each of the three solutions may be necessary. In this case, error handling is used. \\ \\
+The second solution proposed by Dr Hesham consists of compartmentalising the application using a method of his own invention called CompartOS, which is based on CHERI capabilities and is carried out automatically during the linking stage carried out by the compiler. Three solutions are proposed: restarting the offending compartment (requires minimal implementation effort, but is not always possible), modifying the code to include error handling (requires a small implementation effort but requires knowledge of the errors that can be handled) or 'killing' the compartment (this solution is only possible in cases where the compartment is not crucial, such as a music player). Depending on the type of problem, each of the three solutions may be necessary. In this case, error handling is used.
 
 By using simple error handling, consisting of stopping only the faulty compartment and recreating it in another memory area, the compartment returns to a functional state in thirty micro-seconds, however, the allocated memory is not released and this can lead to a exhaustion of memory ressources in the long term. With a little implementation effort, it is possible to specify the release of allocated memory and thus avoid the backlog. This takes sixty microseconds. In this way, system availability is maintained and the effectiveness of CompartOS based on CHERI protections is demonstrated.
 The application used in the demonstration is not complete (it does not simulate all the components of a vehicle): it is a simplified version comprising only the management of data from the CAN bus, using the J1939 protocol, as well as a task updating the information received from the sensors (non-existent in this case). The aim is simply to demonstrate the presence and possible exploitation of a buffer overflow without the CHERI protection.
@@ -1601,7 +1603,7 @@ The application used in the demonstration is not complete (it does not simulate 
         \node at (#1+2,#2+0.5) {...};
         \node at (2+#1,#2+7.5) {...};
         \node at (2+#1,6.5+#2) {buffer global};
-        \node at (2+#1,1.5+#2) {buffer vulnérable};
+        \node at (2+#1,1.5+#2) {vulnerable buffer};
         \node at (2+#1,#2+5.5) {...};
 }
 \begin{figure}
@@ -1658,7 +1660,7 @@ When the \ref{fig:demo_paquet} message is received, it is reconstituted from the
 
 	\end{figure}
 
-The first buffer overflow \ref{fig:demo_overflow} occurs when the buffer in which the function implementing the J1939 protocol copies the entire reci message without checking its size. On a conventional FreeRTOS system, the buffer overflow goes unnoticed.
+The first buffer overflow \ref{fig:demo_overflow} occurs when the buffer in which the function implementing the J1939 protocol copies the entire received message without checking its size. On a conventional FreeRTOS system, the buffer overflow goes unnoticed.
 On a CHERI-FreeRTOS system, the buffer overflow attempt will raise a security exception due to the buffer being bound. On a compartmentalised system, the error handling will call a handler which will free the memory used by the protocol and instantiate it again.
 
 \begin{figure}
@@ -1678,7 +1680,7 @@ On a CHERI-FreeRTOS system, the buffer overflow attempt will raise a security ex
 		\label{fig:demo_copy}
 
 \end{figure}
-The next step, when the buffer is copied to a global variable in an uncontrolled way \ref{fig:demo_copy}, where the exploitation of the vulnerability makes sense, therefore does not occur on a CHERI-FreeRTOS system. On the other hand, on a FreeRTOS system, the buffer will overflow onto global variables and replace their values. In the version of the demonstration that I have produced, this simply stops the execution of the program by replacing used variables that are supposed to have certain values, causing a fault when used. In the original demonstration, the application included an authentication key, vulnerable to a buffer overflow on the global buffer, which was used to accept instructions during over-the-air updates, giving the attacker total control of the vehicle. 
+The next step, when the buffer is copied to a global variable in an uncontrolled way \ref{fig:demo_copy}, where the exploitation of the vulnerability makes sense, therefore does not occur on a CHERI-FreeRTOS system. On the other hand, on a FreeRTOS system, the buffer will overflow onto global variables and replace their values. In this version of this demonstration, this simply stops the execution of the program by replacing used variables that are supposed to have certain values, causing a fault when used. In the original demonstration, the application included an authentication key, vulnerable to a buffer overflow on the global buffer, which was used to accept instructions during over-the-air updates, giving the attacker total control of the vehicle. 
 \newcommand{\threeRect}[5]{
         \draw (#1,#2) rectangle (#1+5,#2+1);
         \draw (#1,#2+1) rectangle (#1+5,#2+2);
@@ -1691,8 +1693,8 @@ The next step, when the buffer is copied to a global variable in an uncontrolled
 \begin{figure}
         \begin{center}
                 \begin{tikzpicture}[scale=0.75]
-                        \threeRect{6}{0}{CHERI-RISC-V}{CHERI-FreeRTOS}{Cyberphys};
-                        \threeRect{-6}{0}{RISC-V}{FreeRTOS}{Cyberphys};
+                        \threeRect{6}{0}{\Gls{cheri-risc-v}}{\Gls{cheri-freertos}}{Cyberphys};
+                        \threeRect{-6}{0}{\Gls{risc-v}}{\Gls{freertos}}{Cyberphys};
                         \threeRect{0}{0}{Architecture}{\acrshort{os}}{Application};
                         \draw[->, thick] (0, -3.5) -- (0, -2)-- (-3, -2) --(-3, 0);
                         \draw[->, thick] (0, -2)-- (8, -2) --(8, 0);
@@ -1729,11 +1731,24 @@ The next step, when the buffer is copied to a global variable in an uncontrolled
         \end{center}
         \caption{Demonstration Build} 
 		\label{fig:cyberphys}
-
 \end{figure}
+The demonstration is build using \href{https://github.com/CTSRD-CHERI/cheribuild}{cheribuild} tool, to build LLVM (a cross compiler) and QEMU (an emulator). LLVM is then used to cross compile the various OS on top of the desired architecture: here FreeRTOS on top of RISC-V and CHERI-FreeRTOS on top of CHERI-RISC-V.
 
 
+\subsection{Demonstration Reproduction}
+\lstinputlisting[numbers=none, caption=,language=bash, lastline=90]{code/CHERI_FREERTOS_DEMO.sh}
 
+Its possible to modify the attack code in many ways: augmenting the size of the buffer and the send length, sending multiple message in a loop (requiring a minimum delay to avoid DOS on your own computer).
+To exit QEMU, use: Ctr\^a+x.
+When running the attack code on a FreeRTOS environment, the expected output is that the message will be received with (recv\_can\_message) prints, then the programm will stop. Its possible to add additional prints to have more information. The code to modify is on ~\/cheri\/freertos\/FreeRTOS\/Demo\/Risc-V-Generic\/demo\/cyberphys\/ .
+When running on a CHERI-FreeRTOS environment, if using debug mode, a security exception will be printed, otherwise the same result as from the FreeRTOS environment will be observed.
+When running on a compartmentalized CHERI-FreeRTOS environment,, a seccurity exception will be printed, and the program will continue running after handling the error using the handling function in j1939.c file. It will, as explained in the theory section, free the corrupted buffer and allocate it again.
+\begin{figure}[h!]
+	\centering
+	\includegraphics[scale=0.4]{images/SecurityException.png}
+	\caption{Security Exception under Compartmentalised Cheri-FreeRTOS Execution}
+	\label{sec:cyberphys-error}
+\end{figure}
 \clearpage 
 \bibliographystyle{plain}
 \bibliography{source}
