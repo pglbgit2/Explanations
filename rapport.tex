@@ -191,7 +191,6 @@ A CHERI pointer (also called a capability) is:
 	\item[Rights] of a pointer to a memory area are those of read, write value and capabilities (pointers) contained in that memory location. It depends on the architectural implementation but some common rights are execution, system calls and seal or unseal the capability.
 	\item[An object type] is used to indicate the size of the object pointed to. If this value is set to -1, the pointer is no longer valid. It can be used by the compiler to fix bounds.
  \end{description}
-	\centering
 \begin{figure}
 	\begin{center}
 	\begin{tikzpicture}
@@ -254,14 +253,12 @@ CHERI rights may be encoded differently depending on hardware implementation. Fo
 
 In a study carried out by Microsoft in 2020 \cite{joly2020security}, a group of researchers studied which vulnerabilities were affected by CHERI protection. (see graphics \nameref{sec:tab} \nameref{sec:graph})
 \begin{figure}[h!]
-	\centering
 	
 	\includegraphics[scale=0.5]{images/cheriMitigationTab.png}
 	\caption{CHERI protection tab (Microsoft study)\cite{joly2020security}}
 	\label{sec:tab}
 \end{figure}
 \begin{figure}[h!]
-	\centering
 	
 	\includegraphics[scale=0.4]{images/mitigationCHERIGraph.png}
 	\caption{CHERI protection graph (Microsoft study)\cite{joly2020security}}
@@ -1744,7 +1741,6 @@ When running the attack code on a FreeRTOS environment, the expected output is t
 When running on a CHERI-FreeRTOS environment, if using debug mode, a security exception will be printed, otherwise the same result as from the FreeRTOS environment will be observed.
 When running on a compartmentalized CHERI-FreeRTOS environment,, a seccurity exception will be printed, and the program will continue running after handling the error using the handling function in j1939.c file. It will, as explained in the theory section, free the corrupted buffer and allocate it again.
 \begin{figure}[h!]
-	\centering
 	\includegraphics[scale=0.4]{images/SecurityException.png}
 	\caption{Security Exception under Compartmentalised Cheri-FreeRTOS Execution}
 	\label{sec:cyberphys-error}
@@ -1757,6 +1753,7 @@ When running on a compartmentalized CHERI-FreeRTOS environment,, a seccurity exc
 \clearpage 
 \appendix
 \section{Annex 1: Exploit Code}
+This code can also be found \href{https://github.com/pglbgit2/Explanations.git}{here}
 \lstinputlisting[numbers=none, caption=exploit.c]{code/exploit.c}
 
 \lstset{ % Define settings for the listings package
