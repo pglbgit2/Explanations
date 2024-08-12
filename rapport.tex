@@ -17,7 +17,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{pgffor}
 \usepackage[font=small,labelfont=bf]{caption} % Required for specifying captions to tables and figures
-\newacronym{os}{OS}{Operating System (système d'exploitation)}
+\newacronym{os}{OS}{Operating System}
 
 \newcommand{\cmark}{\ding{51}} 
 \newcommand{\xmark}{\ding{55}}
@@ -162,9 +162,8 @@
 \section{Introduction}
 In this document, you will find condensed information about \Gls{cheri} to give a basic context of the hardware protection, some complementary explanations of the solutions from the \href{https://ctsrd-cheri.github.io/cheri-exercises/cover/index.html}{Adversarial CHERI Exercises and Missions} as well as some explanations of self-made tests inspired by CHERI Introduction to C/C++ \cite{watson2020cheri}, and finally some explanations concerning the Cyberphys demonstration. 
 If you want to run these exercises yourself, you will need to follow the steps of this \href{https://ctsrd-cheri.github.io/cheri-faq/#how-can-i-emulate-a-cheri-enabled-environment}{official CHERI tutorial} on how to get CHERI environment. This will help you emulate using \Gls{qemu} either a \Gls{cheribsd} running on \Gls{cheri-risc-v} or \Gls{morello} environment. Take the \Gls{morello} environment to install useful packages such as llvm, gdb, python, nano, vim and many others.
-These exercises will compare the behavior of CHERI protected environment and classic environment (\Gls{risc-v}).
+These exercises will compare the behavior of CHERI protected environment and classic environment (\Gls{risc-v}). These CHERI exercises requires minimal knowledge of CHERI. The following section give essential information on the topic.
 Note: This is not a research paper and does not have the vocation to be published. It is an explanation document.
-These CHERI exercises requires minimal knowledge of CHERI. The following section give essential information on the topic.
 
 \printnoidxglossaries
 
@@ -186,7 +185,7 @@ The modification in the nature of a pointer explain the modification of the inst
 A CHERI pointer (also called a capability) is:
 \begin{description}
 	\item[An address] is what a normal pointer is: a reference to a place in memory.
-	\item[A validity tag], a single bit located not in the pointer but in a safe zone in memory. It is a value which indicates whether a pointer can be dereferenced (read or modified). An invalid pointer can only be used to display its address. The values and rights of pointers can be modified under certain conditions. If a pointer modification is illegitimate, the validity tag is set to zero. (Following an unauthorised modification, it is considered that the pointer can no longer be trusted). 
+	\item[A validity tag], a single bit located not in the pointer but in a safe zone in memory. It is a value which indicates whether a pointer can be dereferenced (read or modified). An invalid pointer can only be used to display its address. The values and rights of pointers can be modified under certain conditions. If a pointer modification is illegitimate, the validity tag is set to zero. (Following an unauthorized modification, it is considered that the pointer can no longer be trusted). 
 	\item[Bounds] of a pointer define the lower and upper bounds which delimit the address range which a pointer can access. If a pointer attempts to access a memory area outside these bounds, a security exception is thrown.
 	\item[Rights] of a pointer to a memory area are those of read, write value and capabilities (pointers) contained in that memory location. It depends on the architectural implementation but some common rights are execution, system calls and seal or unseal the capability.
 	\item[An object type] is used to indicate the size of the object pointed to. If this value is set to -1, the pointer is no longer valid. It can be used by the compiler to fix bounds.
@@ -267,9 +266,9 @@ In a study carried out by Microsoft in 2020 \cite{joly2020security}, a group of 
 CHERI therefore offers complete protection against write and read accesses outside the limits imposed (spatial security property), possible protection against the use of freed memory (temporal safety of pointer to freed memory zone) and CHERI offers no protection against integer overflows (when an integer is incremented until it reaches the maximum value calculable with 4 bytes, it is reset to 0). 
 \\
 The study is no longer completely up-to-date, as CHERI now offers experimental protection against problems caused by memories that are not initialized correctly. It is possible to include options during compilation to force an initialization to 0 of all uninitialized bytes (NULL for a pointer).
-In addition, temporal protections have been integrated into CHERI, as described in the article Cornucopia: Temporal Safety for CHERI Heaps \cite{filardo2020cornucopia}, which forbids the memory allocator to allocate a memory zone which is still pointed by a valid pointer, and allows pointers to free zones to be "sweep" from memory using a specific operation, allowing re-use of those zone. It does not prevent use after free until sweeping, however.
+In addition, temporal protections have been integrated into CHERI, as described in the article Cornucopia: Temporal Safety for CHERI Heaps \cite{filardo2020cornucopia}, which forbids the memory allocator to allocate a memory zone which is still pointed by a valid pointer (using a shadow bitmap, where one bit correspond to a word in memory, being the boolean: have this word been allocated and freed), and allows pointers to free zones to be "sweep" from memory using a specific operation, allowing re-use of those zone (setting the bit in the bitmap corresponding to that zone to 0). It does not prevent use after free until sweeping, however. Cornucopia also uses techniques to optimize memory scan, such as setting two flags for each memory pages: one standing for the absence of a pointer in the page, and one for the absence of pointer store since the last sweep (has a pointer been added to that page).
 \\
-According to a report on the compartmentalization provided by CHERI \cite{almatary2022compartos}, it is possible to use CHERI to implement strong compartmentalization in an embedded system, so that if an attacker were to exploit a vulnerability, the ability to interfere with the normal behavior of the system that he would obtain would be reduced compared with a conventional system. Indeed, even assuming the entirety of a non-critical compartment to be under the control of an attacker, the study demonstrates the normal operation of an embedded system using \Gls{cheri-freertos}, a \Gls{freertos} system using CHERI protections and CompartOS (the compartmentalisation system dealt with in the study). On a standard \Gls{freertos} system running on \Gls{risc-v} architecture, the exploitation of a vulnerability is successful and the attacker can influence the integrity, confidentiality and availability of the data and the operation of the system. With CHERI protections under \Gls{cheri-freertos} running on \Gls{cheri-risc-v}, the attack is intercepted but the raising of an untreated error forces a brutal restart of the system, which takes two seconds, affecting the availability of the system playing a critical role (in the study, the system under attack was the brake system), with the use of CompartOS, the critical compartment is restarted in 60 microseconds and the malicious compartment is "killed". This study show different usage of compartmentalization, one enforced automatically using library linkage, another adding a custom handler which require knowledge of the compartmentalization process and implementation efforts but is necessary when dealing with a critical compartment (the study uses fault handling in different context: the main application, a non critical compartment and a critical compartment which is used by the main application).
+According to a report on the compartmentalization provided by CHERI \cite{almatary2022compartos}, it is possible to use CHERI to implement strong compartmentalization in an embedded system, so that if an attacker were to exploit a vulnerability, the ability to interfere with the normal behavior of the system that he would obtain would be reduced compared with a conventional system. Indeed, even assuming the entirety of a non-critical compartment to be under the control of an attacker, the study demonstrates the normal operation of an embedded system using \Gls{cheri-freertos}, a \Gls{freertos} system using CHERI protections and CompartOS (the compartmentalization system dealt with in the study). On a standard \Gls{freertos} system running on \Gls{risc-v} architecture, the exploitation of a vulnerability is successful and the attacker can influence the integrity, confidentiality and availability of the data and the operation of the system. With CHERI protections under \Gls{cheri-freertos} running on \Gls{cheri-risc-v}, the attack is intercepted but the raising of an untreated error forces a brutal restart of the system, which takes two seconds, affecting the availability of the system playing a critical role (in the study, the system under attack was the brake system), with the use of CompartOS, the critical compartment is restarted in 60 microseconds and the malicious compartment is "killed". This study show different usage of compartmentalization, one enforced automatically using library linkage, another adding a custom handler which require knowledge of the compartmentalization process and implementation efforts but is necessary when dealing with a critical compartment (the study uses fault handling in different context: the main application, a non critical compartment and a critical compartment which is used by the main application).
 A study carried out on Spectre-type attacks \cite{fuchs2021developing} showed that CHERI did not provide any protection against these attacks. Spectre-type attacks use an optimization flaw in the processors, which is not directly CHERI's area of intervention but are still considered memory vulnerabilities exploitation.
 \clearpage
 \section{CHERI Exercises}
@@ -279,7 +278,7 @@ A study carried out on Spectre-type attacks \cite{fuchs2021developing} showed th
 	It can be interpreted as a boolean for the capacity of the pointer to be dereferenced.
 	Using the following we can define how to print a pointer (using standard print or verbose CHERI pointers specific print).
 	\lstinputlisting[numbers=none, firstline=9, lastline=17, caption=]{code/ex1-corrupt-pointer.c}
-	\%p print a standart pointer, while \%\#p prints CHERI information about the pointer.
+	\%p print a standard pointer, while \%\#p prints CHERI information about the pointer.
 	The objective here is to manipulate a pointer value in both authorized and not authorized ways and compare the behavior.
 	\textbf{Take a moment to read the following code and comments}
 	\lstinputlisting[numbers=none, firstline=21, lastline=28, caption=]{code/ex1-corrupt-pointer.c}
@@ -313,7 +312,7 @@ r=\ptraddress{}7fe00 [rwRW, \ptraddress{}7fd4c-\ptraddress{}7ff4b] (invalid) (0x
 Program received signal SIGPROT, CHERI protection violation.\\
 Capability tag fault
 \end{tcolorbox}
-The Capability Tag Fault is a security exception thrown because of a memory access through an invalid pointer.
+The Capability Tag Fault is a security exception thrown because of a memory access through an invalid pointer. If you do the exercise, you will have "In-address space security exception (core dumped)" to obtain with more precision what kind of security error it is, its possible to use \Gls{gdb} to print with more information, in this case Capability tag fault. Capability Tag fault and Out of Bounds access are the most two frequent errors, but there is also an exception regarding rights. 
 \begin{center}
 
 	\begin{tikzpicture}
@@ -348,10 +347,10 @@ The Capability Tag Fault is a security exception thrown because of a memory acce
     \end{tikzpicture}
 	\end{center}
 We can see here that the resulting pointer of the AND mask operation was considered valid whereas the pointer resulting of the byte modification was not considered valid. That is because a AND operation can verify if the resulting pointer is still in the bounds of the original pointer, if that is the case, its still valid, but if not it becomes invalid. Using a byte modification is not a valid modification of a pointer because its not supposed to happen. 
-Invalid pointers can be printed, and they appear as invalid, but they can not be dereferenced. If trying to dereference them, it produce the above error: SIGPROT, capability tag fault.
+Invalid pointers can be printed, and they appear as invalid, hence can not be dereferenced. If trying to dereference them, as occurred during the execution, it produce the above error: SIGPROT, capability tag fault.
 
 \subsection{Exercise an inter-stack-object buffer overflow}
-	The objective here is to do a buffer overflow on the stack with two buffer next to each other, so that there's an overflow in an allocated memory.
+	The objective of this exercise is to do a buffer overflow on the stack with two buffer next to each other, so that there's an overflow in an allocated memory.
 	\textbf{Take a moment to read the following code and comments}
 	\lstinputlisting[numbers=none, firstline=19, lastline=40, caption=]{code/ex2-buffer-overflow-stack.c}
 
@@ -380,7 +379,7 @@ upper = 0x7fff10f911a0, lower=0x7fff10f91190, diff = 10\\
 upper[0] = a\\
 upper[0] = b
 \end{tcolorbox}
-As we can see, the overflow happened: the value has changed from 'a' to 'b'.\break
+As we can see, the overflow from the lower buffer to the upper buffer happened: the value of the first char of the upper buffer has changed from 'a' to 'b'.\\
 In order to fully understand what happens with the CHERI protected environment, we will modify the code: instead of using \%p on the first printf call, we will use \%\#p.
 
 \begin{tcolorbox}[colback=gray!5!white, colframe=blue!75!black, title=Output on an environment protected by CHERI]
@@ -389,7 +388,7 @@ In order to fully understand what happens with the CHERI protected environment, 
 	upper[0] = a\\
 	In-address space security exception (core dumped)
 \end{tcolorbox}
-The SIGPROT error means that the buffer overflow was detected and prevented because of the bounds of the lower pointer.
+The SIGPROT error means that the buffer overflow was detected and prevented because of the bounds of the lower pointer (so if using GDB, the error should be a Capability Bound Fault).
 We can see that the bounds of the lower pointer goes from \ptraddress{}7ff3c to \ptraddress{}7ff4c. The upper bound is not included in the authorized access zone. 
 The upper buffer goes from \ptraddress{}7ff4c to \ptraddress{}7ff5c. So, by trying to write on \ptraddress{}7ff4c using the lower pointer, which is an out of bounds access, the program throw an error.
 
@@ -405,9 +404,9 @@ The upper buffer goes from \ptraddress{}7ff4c to \ptraddress{}7ff5c. So, by tryi
 
 
 \subsection{Exercise an inter-global-object buffer overflow}
-	The objective here is to do a buffer overflow on the stack with one buffer such as there's an overflow in a character.
+	The objective here is to do a buffer overflow on the stack with one buffer such as there's an overflow in a single char.
 	One thing very important to remember in this exercise is that CHERI bounds have not exact precision. Sometimes, an overflow of 1 can go unnoticed because of bounds compression.
-	So the various scenario are: the overflow is unnoticed because buffer was allocated more memory than asked, or overflow tries to occurs on the allocated character (which is outside of buffer bounds).
+	So the various scenario are: the overflow is unnoticed because buffer was allocated more memory than asked, or overflow tries to occurs on the allocated character (for the second scenario, it is outside of buffer bounds).
 	\begin{center}
 		\begin{tikzpicture}
 			% Define the data for the array
@@ -481,7 +480,7 @@ The upper buffer goes from \ptraddress{}7ff4c to \ptraddress{}7ff5c. So, by tryi
 
 	\begin{lstlisting}[caption=Example C Code]
 	printf("%#p\n",buffer);
-        printf("%#p\n",&c);
+    	printf("%#p\n",&c);
 	\end{lstlisting}
 	which print:
 	\begin{tcolorbox}[colback=gray!5!white, colframe=blue!75!black, title=Output On an environment protected by CHERI]
@@ -494,13 +493,13 @@ The upper buffer goes from \ptraddress{}7ff4c to \ptraddress{}7ff5c. So, by tryi
 
 \subsection{Explore Subobject Bounds: Subobject Overflows}
 	The objective here is to understand how sub-objects works in CHERI environment.
-	Here are the essentials:
-	By default, all pointers inside an object has the rights to access to the whole object.
-	This can be changed using compiler options "-Xclang -cheri-bounds=subobject-safe", such as all components of all structures only has access to themselves.
+	By default, all pointers inside an object have the rights to access to the whole object.
+	This can be changed using compiler options "-Xclang -cheri-bounds=subobject-safe", such as all components of all structures only has access to themselves. Using pointer logic, the bounds of a pointer to a sub-object are the size of the sub-object and not the size of the object.
 	It is possible to call built-in function: \_\_containerof that takes a subobject and return a pointer to the object.
 	During the definition of an object its possible to use the flag \_\_subobject\_use\_container\_bounds so that the attribute marked will have the container bounds, even with the compiler option active.
 	It is also possible to mark the structure with this flag such as all elements within have access to the whole structure.
 	That means its possible to forbid access generally then gives rights to specific structures and attributes.
+	On this exercise, we will try to make an overflow on a subobject in three scenario: no CHERI protection, default CHERI protection, CHERI protection with sub-object protection.
 	\textbf{Take a moment to read the following code and comments}
 	\lstinputlisting[numbers=none, firstline=6, lastline=10, caption=]{code/ex4-subobjects-bounds.c}
 	\lstinputlisting[numbers=none, firstline=20, lastline=40, caption=]{code/ex4-subobjects-bounds.c}
@@ -549,13 +548,13 @@ The upper buffer goes from \ptraddress{}7ff4c to \ptraddress{}7ff5c. So, by tryi
 		b.i = c\\
 		b.i = b
 	\end{tcolorbox}
-	Which are the same. Now, we will compile the CHERI program with the compiler option "-Xclang -cheri-bounds=subobject-safe".
+	Which are the same. By default CHERI subobject have access to the whole structure, meaning their bonds are those of the structure, meaning that buffer can write over integer i. Now, we will compile the CHERI program with the compiler option "-Xclang -cheri-bounds=subobject-safe".
 	The execution results changes:
 	\begin{tcolorbox}[colback=gray!5!white, colframe=blue!75!black, title=Output On an environment protected by CHERI \& Subobject Protection]
 		b.i = c\\
 		In-address space security exception (core dumped)
 	\end{tcolorbox}
-	The overflow was detected and prevented.
+	The overflow was detected and prevented, because the bounds of the subobjects are exactly their size, meaning that when the buffer tries to write over integer i, it cannot due to his bounds.
 	
 
 
@@ -563,11 +562,12 @@ The upper buffer goes from \ptraddress{}7ff4c to \ptraddress{}7ff5c. So, by tryi
 
 The code can be found in this \href{https://ctsrd-cheri.github.io/cheri-exercises/exercises/subobject-bounds/}{repository}.
 The following image comes from \href{https://ctsrd-cheri.github.io/cheri-exercises/exercises/subobject-bounds/subobject-bounds.pptx}{exercises presentation}.
-
+\begin{figure}
 \begin{minipage}{\linewidth}
 	\includegraphics[width=\linewidth]{images/Lists-explanations.png}
-	\captionof{figure}{Linked List}
 \end{minipage}
+\caption{Linked List}
+\end{figure}
 In order to make things appear simple, we split the code into three parts:
 The linked list structure:
 \lstinputlisting[numbers=none, firstline=14, lastline=18, caption=]{code/ex4-lists.c}
@@ -577,7 +577,7 @@ The creation of the object list.
 \lstinputlisting[numbers=none, firstline=66, lastline=70, caption=]{code/ex4-lists.c}
 
 
-As this exercises uses things that requires CHERI to be active, we will begin directly with CHERI protected environment.
+As this exercises uses things that requires CHERI to be active (access to capability bounds), we will begin directly with CHERI protected environment.
 \begin{tcolorbox}[colback=gray!5!white, colframe=blue!75!black, title=Output On an environment protected by CHERI]
 	Traversing list=0x131060 [rwRW, 0x131060-0x131080] \\
 	first=0x130f40 [rwRW,0x130f30-0x130f60] lastnp=0x130fb0 [rwRW, 0x130f90-0x130fc0]\\
@@ -598,13 +598,13 @@ This exercise uses a chain-list to demonstrate why subobject are not protected b
 To avoid some confusion remember that when printing a pointer, it prints the address of the pointed value and the bounds of the pointed structure. Not those of the object containing the pointer. Which means printing a pointer in an object is useful to see the bounds of the pointed object, not the bounds of the object including the pointer that is printed.
 The list is composed of three elements :\\
 
-The sentinel which is a struct of two pointers : one pointing on the first object of the list, one on the next pointer of the last object (the next pointer of the last object lead to the sentinel next pointer but that is not the purpose of next pointer because they have access to the whole structure by default, allowing modifying value or list pointers) it is two pointers so 32 bytes : 20 in hexadecimal, so this explains the given bounds [0x131060-0x131080] we know thanks to the first element previous next pointer that the next pointer of the sentinel is on 0x131070 which means that the next pointer of the sentinel occupies this space : 0x131070-0x131080 and that the previous next pointer of the sentinel which leads to the last object next pointer of the list, is on this space : 0x131060-0x131070.\\
+The sentinel which is a struct of two pointers : one pointing on the first object of the list, one on the next pointer of the last object (the next pointer of the last object lead to the sentinel next pointer but that is not the purpose of next pointer because they have access to the whole structure by default, allowing modifying value or list pointers) it is two pointers so 32 bytes : 20 in hexadecimal, so this explains the given bounds [0x131060-0x131080] we know thanks to the first element previous next pointer that the next pointer of the sentinel is on 0x131070 which means that the next pointer of the sentinel occupies this space : 0x131070-0x131080, due to the fact pointer in CHERI architecture occupies 16 bytes and that the previous next pointer of the sentinel which leads to the last object next pointer of the list, is on this space : 0x131060-0x131070.\\
 The first object which is a struct of three pointers : one pointing at the object value, one pointing at the next element of the list (which is the third because the second was removed) and which bounds are (0x130f60-0x130f90) because the pointer of the list element points on the next list element which is different from the object in the list, but still at the same memory space, because there’s one more pointer in the object (the value pointer)(an object is a list element and a value, a list element is a next pointer and a previous next pointer), for this object : we know thanks to the second object previous next pointer that the next pointer of the first object is on 0x130f50 and the bounds of the first object are 0x130f30-0x130f60 which means that the object value pointer is on 0x130f50-0x130f60, the cursor indicate us the position of the element in list which corresponds to the next pointer of the first object which we can place on 0x130f40-0x130f50, the only pointer that remains is the value pointer which is on 0x130f30-0x130f40. Which explains the given bounds : 0x130f30-0x130f60\\
-The second object which is the third because the second was removed, is also a struct of three pointers : one pointing at an object value, one pointing at the next element of the list (which is the sentinel, meaning end of list) and one at the previous next pointer which is the next pointer of the first element, leading to this second list element (which is the third, considering the second was removed). We know thanks to the previous next pointer of the sentinel, that the next pointer of the second object is located in 0x130fb0, the cursor indicates the next pointer of the second object on 0x130fa0 which means that on [0x130f90-0x130fa0] there’s the object value pointer, on [0x130fa0-0x130fb0] there’s the next pointer of the second object leading to the sentinel, on [0x130fb0-0x130fc0] there’s the previous next pointer of the second object, pointing on the first object next pointer.\\
+The second object which is the third because the true second was removed, is also a struct of three pointers : one pointing at an object value, one pointing at the next element of the list (which is the sentinel, meaning end of list) and one at the previous next pointer which is the next pointer of the first element, leading to this second list element (which is the third, considering the second was removed). We know thanks to the previous next pointer of the sentinel, that the next pointer of the second object is located in 0x130fb0, the cursor indicates the next pointer of the second object on 0x130fa0 which means that on [0x130f90-0x130fa0] there’s the object value pointer, on [0x130fa0-0x130fb0] there’s the next pointer of the second object leading to the sentinel, on [0x130fb0-0x130fc0] there’s the previous next pointer of the second object, pointing on the first object next pointer.\\
 So a list element is only composed of a next pointer and a previous next pointer (like the sentinel) but has access to the value pointer which is just before the element list, because the object struct includes the list element struct. A pointer leading to the element list struct of an object has access to whole object because pointer are not protected from inside pointer of a struct, their bounds include the whole struct.\\
 
-When using "-Xclang -cheri-bounds=subobject-safe" compiler option nothing changes, because in object definition the original code is using "\_\_subobject\_use\_container\_bounds" flag.
-An execution with the compiler option and the flag removed look like this:
+When using "-Xclang -cheri-bounds=subobject-safe" compiler option, nothing changes, because in object definition the original code is using "\_\_subobject\_use\_container\_bounds" flag on the ilist element, which allow this subobject to have access to the whole object.
+An execution with the compiler  sub-object protection option and the flag removed look like this:
 \begin{tcolorbox}[colback=gray!5!white, colframe=blue!75!black, title=Output On an environment protected by CHERI \& Subobject protection]
 	Traversing list=0x131060 [rwRW, 0x131060-0x131080] \\
 	first=0x130f40 [rwRW,0x130f30-0x130f60] lastnp=0x130fb0 [rwRW, 0x130f90-0x130fc0]\\
@@ -620,11 +620,8 @@ An execution with the compiler option and the flag removed look like this:
 	In-address space security exception (core dumped)
 \end{tcolorbox}
 
-This is because pointer of list only have access to the list structures. Remember that the object is different from the list element, it contains one more value. Pointers of the list can be used to navigate from one element to the other without problems. However they can not be used to access the value. 
-Which is why it produces the above error.
-
-
-
+This is because pointer of list only have access to the list structures. Remember that the object is different from the list element, it contains one more value. Pointers of the list can be used to navigate from one element to the other without problems (a pointer to next have access to a next pointer which have access to the following next pointer... until the beginning of the list). However they can not be used to access the value (without the flag allowing them to access the whole structure, the value is out of bound).
+Which is why it produces the above security exception which is a Capability Bound Fault.
 
 
 \subsection{Corrupt a control-flow pointer using a subobject buffer overflow}
@@ -674,7 +671,7 @@ Here we are going to see that if the pointer is modified during the copying, as 
 	Segmentation fault(core dumped)
 	\end{tcolorbox}
 	This happen because the program tries to call 0xAAAAAAAA as a function. This address is not linked with anything which ends up in segmentation fault.
-	Also, in CHERI the segmentation fault has priority over the validity tad. To prove this, we can modify the code like this:
+	Also, in CHERI the segmentation fault has priority over the validity tag. To prove this, we can modify the code like this:
 
 
 	\begin{lstlisting}[caption=Control flow modified C Code]
@@ -800,8 +797,8 @@ Here we are going to see that if the pointer is modified during the copying, as 
 		Which is coherent because the overflow is an out of bounds.
 	
 	\subsection{Exercise integer pointer type confusion bug}
-		This exercise goal is to prevent programer from using the "long" type to manipulate pointers values. 
-		To manipulate pointers one must use "intptr\_t" type in stdint.h. 
+	This exercise goal is to prevent programers from using the "long" type to manipulate pointers values, because it is bad practice.  
+		To manipulate pointers one must use "intptr\_t" or "uintptre\_t" types, using stdint.h. 
 		\lstinputlisting[numbers=none, firstline=9, lastline=12, caption=]{code/ex7-integer-pointer-type-confusion-bug.c}
 		hello is a pointer that reference the string "Hello World". 
 		\lstinputlisting[numbers=none, firstline=23, lastline=28, caption=]{code/ex7-integer-pointer-type-confusion-bug.c}
@@ -814,19 +811,18 @@ Here we are going to see that if the pointer is modified during the copying, as 
 			lp.ptr Hello World!\\
 			lp.ptr ello World!
 		\end{tcolorbox}
-		Here the long can be cast to a pointer. 
 		\begin{tcolorbox}[colback=gray!5!white, colframe=blue!75!black, title=Execution on CHERI environment]
 			lp.ptr Hello World!\\
 			In-address space security exception (core dumped)
 		\end{tcolorbox}
-		Here it can't be cast to a pointer and produce a security exception.
+		Under CHERI protections, it can not be cast to a pointer and produce a security exception.
 		The long is supposed to be use for great precision numbers. Not to be cast to a pointer.
 		In CHERI, using long for pointer is problematic because of validity tag. A variable of type intptr\_t will have its validity tag in memory which means that if it is modified by not authorized operation, the pointer obtained from a potential cast will be not valid.
 		However if CHERI allowed long conversion, either it creates a validity tag for each long, even if they are not supposed to be pointers, or a modification of a long could in a non authorized way result in a valid pointer, which would go against the spacial property of CHERI.
 		You can test this by doing a buffer overflow on a intptr\_t variable and try to dereferenced it after cast to pointer.
 	
 	\subsection{Demonstrate pointer injection}
-		This exercise goal is to demonstrate that CHERI forbid pointer usage from another process.
+		This exercise goal is to demonstrate that CHERI forbid pointer use, if the pointer comes from another process.
 		First is an example of sharing raw value that works. The code can be found on this \href{https://ctsrd-cheri.github.io/cheri-exercises/exercises/pointer-injection/index.html}{repository}.
 	
 	
@@ -861,10 +857,10 @@ Here we are going to see that if the pointer is modified during the copying, as 
 		\begin{tcolorbox}[colback=gray!5!white, colframe=blue!75!black, title=Execution of ptr transmission on CHERI environment]
 			In-address space security exception (core dumped)
 		\end{tcolorbox}
-		When a process give an address to another process, this pointer is not valid, which means it can not be dereferenced. Trying to do so throw the above security exception.
+		When a process give an address to another process, the received pointer is not valid, which means it can not be dereferenced. Trying to do so throw the above security exception.
 	
 	\subsection{Adapt C Program to CHERI C}
-		The objective of this exercise is to learn how to adapt C program using gdb.
+		The objective of this exercise is to learn how to adapt C programs, using gdb to identify the faulting lines of code.
 		The code is quite long so we are not going to print it in this explanations.
 		The makefile is not correct in this exercise. Here is an explanation to how compile:
 		cc -c methods.c ; 
@@ -876,7 +872,7 @@ Here we are going to see that if the pointer is modified during the copying, as 
 	
 	
 	 In order to run the program and execute it step by step, you can do "break main" then "r" then "nexti" until it crashes.
-	 After finding the section of code that is throwing the error, which is normally a function call, you can step into it using "stepi". This will aid you to find the problematic section.
+	 After finding the section of code that is throwing the error, which is normally a function call, you can step into it using "stepi" after running again the program. This will aid you to find the problematic section.
 	 It is possible to place breakpoints on the function calls of problematic warnings mentioned in compiler.
 	 Another option is to have read the code and seen that "write(2) failed" is an error thrown in raw\_cat function, when write\_off function fails and place break point on write\_off.
 	 write\_off function uses a cast to const void* of an offset and a buffer. The problem is that CHERI must know what is a pointer and what is an offset in order to conserve bounds and validity tag. Here the cast from buf to uintptr\_t confuse the compiler because it has two pseudo pointer values to add.
@@ -997,8 +993,8 @@ Here we are going to see that if the pointer is modified during the copying, as 
 
 		This exercise uses a simple example to illustrate a more complex problem.
 		The more global problem is related to temporal and spacial safety, on allocation, metadata manipulation and memory freeing. Its common practice in C to stock metadata outside of an object.
-		However in CHERI this practice can not be allowed, as it would be out the bounds of the object, which means the object must include meta-data, that could be implemented by augmentation of pointer bounds when necessary.
-		In the following code is implemented a simple version of an allocator with fixed size and no metadata. 
+		However in CHERI this practice can not be allowed, as it would be out the bounds of the object, which means the object must include meta-data, that could be implemented by augmentation of pointer bounds when necessary (its possible to dynamically modify the bounds of a pointer).
+		In the following code is implemented a simple version of an allocator with fixed size and no metadata.
 		This allocator will be itself allocated as an array of a specific structure and then when a specific function is called, "allocate" memory to pointers, using byte arrays.
 		As the arrays of structure are allocated together, they follow each other on the memory, meaning that a buffer overflow on byte array might have impact on the next structure.
 		The allocator uses a pointer named alloc\_next\_free to identify the next free byte array. However to actualize this pointer, the program uses the next pointer. Which means overflowing at a memory allocation will not stop the allocator from allocating the corrupted structure instance, but it will produce an error after trying to allocate from this corrupted instance.
@@ -1221,11 +1217,11 @@ Here we are going to see that if the pointer is modified during the copying, as 
 			Calling function pointer through obj1 (now 0x40c0f000  [rwRW,0x40c0f000-0x40c0f040])\\
 			First function: 0x40c0f000 [rwRW,0x40c0f000-0x40c0f040]
 		\end{tcolorbox}
-		Here we can see, in classic environment, the memory space was used again after the free of obj1 to allocate obj2, so the first pointer has access to the second pointer memory space. However with CHERI protection activate, even if object 1 was freed, obj2 has a different memory address.
+		Here we can see, in classic environment, the memory space was used again after the free of obj1 to allocate obj2, so the first pointer has access to the second pointer memory space. However with CHERI protection active, even if object 1 was freed, obj2 has a different memory address.
 		This is because of memory quarantine: If there are valid pointers pointing on a free memory zone, its not possible to allocate this one.
 		We can also see that there is a use after free: first function is called using object 1 even if object 1 was already freed by the time of the call.
 
-		We can now use DCAPREVOKE option on compiler which will tell the program that if it encounters malloc\_revoke function, it will invalidate all pointers pointing on free memory, allowing re-use of memory space.
+		We can now use DCAPREVOKE option on compiler which will tell the program that it can access the malloc\_revoke function, which will invalidate all pointers pointing on free memory, allowing re-use of memory space.
 		\begin{tcolorbox}[colback=gray!5!white, colframe=purple!75!black, title=Output on CHERI protected environment \& CAPREVOKE compiler option active]
 			Installing function pointer in obj1 at 0x40c0f000 [rwRW,0x40c0f000-0x40c0f040]\\
 			Demonstrating use after free:\\
@@ -1337,28 +1333,28 @@ Here we are going to see that if the pointer is modified during the copying, as 
 		You will also have to use a file for the input. For example "41" a hundred times is a valid input.
 		Beware that segmentation fault is default behavior. The previous example will produce that output, even if valid. There are two scenario for segmentation fault: normal program execution and when writing in not allocated space.
 		The default function is called in certain circumstances but not always.
-		To make sure of what happen, it can be a good idea to add print call in eat\_cookies (cookie\_fn value) for two reasons: you know if the write happened correctly because you entered next function and you know if the value was overwritten. 
-	
-	
-		Using 300 times "41" will result in a segmentation fault due to writing (the print before function call doesn't appear) (second scenario).
-		Using 250 times "41" will result in a segmentation fault due to uninitialized function pointer call (the print appear)(first scenario). However the address is not overwritten.
-		Using 264 times "41" will result in second scenario. Using 266 times "41" will result in first scenario. Which means that there's a non allocated memory space here.
-		Using 264*"41"+"-"*8+"42" will result in first scenario. We have successfully pass the non allocated zone. However the function address is still not overwritten.
-		Using "41"+"-"*8+"42"*76 we overwrite the return address.
-		Using "41"+"-"*8"+"42"*72+"380e21" we overwrite the return address with the address of the success function.
+		To make sure of what happen, it can be a good idea to add a print in eat\_cookies (printing cookie\_fn, the function pointer value), just before the cast and call. This is useful for two reasons: you know if the write happened correctly because you entered next function and you know if the value was overwritten. 
+		First scenario of execution: segmentation fault, the print of the function does not appear: meaning it faulted before the call
+		Second scenario of execution: segmentation fault, the print happens, meaning the function call is the origin of the problem
+		Third scenario: the pointer value is the success function address, and the success function is called
+		Default is second scenario, because the pointer is never initialized. If writing on a non allocated memory zone, the execution will be on first scenario.
+		Using trial and error, its possible to know where are the non allocated zone and pass through them, then overwrite the function address.
+		For my computer, "41"+"-"*8"+"42"*72+"380e21" will overwrite the return address with the address of the success function (380e21).
+		It just writes 'A's before the non allocated zone, then 'B's after and when reaching the non allocated pointer memory space, it writes the address of the success function.
 		Numbers might change from one computer to another.
 		\begin{tcolorbox}[colback=gray!5!white, colframe=gray!75!black, title=baseline RISC-V environment ]
 			target function: 0x210e38
 			called function address: 0x210e38
 			Exploit successful, yum!
 		\end{tcolorbox}
+		For not protected environment, it is third scenario.
 		\begin{tcolorbox}[colback=gray!5!white, colframe=blue!75!black, title=CHERI-RISC-V environment]
 			called function address: 0x110e95
 			called function address: 0x0
 			Segmentation fault (core dumped)
 		\end{tcolorbox}
 		Here, as the variable was uninitialized, the memory allocator put NULL by default.
-		So the overflow happened, but it was overwritten by NULL (0x0).
+		So the overflow happened, but it was overwritten by NULL (0x0). So it is second scenario.
 	
 \section{Personal Tests Explanations}
 \subsection{Shell Code Buffer Overflow On Stack}
@@ -1406,9 +1402,10 @@ The following graphic is a copy of \href{https://hg8.sh/posts/binary-exploitatio
 	% Address labels
 	\node[anchor=south east] at (-1, \bufferheight + 4*\boxheight) {Lower Address};
 	\node[anchor=north east] at (-1, 0) {Higher Address};
-	\draw[->, thick] (-0.5, \bufferheight/2 + 3*\boxheight) -- (-0.5,  0.5*\boxheight);
-	\node at (-4.25, 4*\boxheight) {Writing over Return Address using Buffer};
-	
+	\draw[->, thick] (-0.5, \bufferheight/2 + 3*\boxheight) -- (-0.5,  0.5*\boxheight) -- (0,  0.5*\boxheight);
+	\node at (-4.5, 2*\boxheight) {Writing over Return Address using Buffer};
+	\draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (-0.5, 3*\boxheight) -- (-0.5, 3*\boxheight+\bufferheight) node [black,midway,xshift=-1.8cm] {buffer bounds};
+
 	\end{tikzpicture}
 \end{center}	
 The buffer overflow will overwrite the return address value such as the next instruction will be the one of the beginning of the buffer, containing the shellcode.
@@ -1424,7 +1421,7 @@ To compile the code, the options: "-fno-stack-protector" and "-z execstack" must
 Also use the command setarch -RL bash to disable address randomization for the terminal you are using.
 According to \href{https://www.securityweek.com/aslr-bypass-techniques-appearing-more-frequently-attacks/}{security week}, \href{https://www.bleepingcomputer.com/news/security/cisa-warns-of-samsung-aslr-bypass-flaw-exploited-in-attacks/}{bleeping computer} and \href{https://www.securityweek.com/aslr-bypass-techniques-appearing-more-frequently-attacks/}{another article from security week} it is possible to bypass ASLR.
 According to \href{https://tc.gts3.org/cs6265/2020-spring/tut/tut04-ssp.html}{Information security lab} and \href{https://ctf101.org/binary-exploitation/stack-canaries/}{ctf101} and \href{https://ibm.github.io/system-security-research-updates/2021/06/18/spear-attacks-ssp-usecase}{ibm} it is possible to bypass the stack protector.
-Canaries are critised as being not secure in \href{https://ar5iv.labs.arxiv.org/html/2003.05503}{Bypassing memory safety mechanisms through speculative control flow hijacks} research paper and ALSR is criticized in the same way in \href{https://www.researchgate.net/publication/346588673_Speculative_Probing_Hacking_Blind_in_the_Spectre_Era}{Speculative\_Probing\_Hacking\_Blind\_in\_the\_Spectre\_Era}.
+Canaries are critized as being not secure in \href{https://ar5iv.labs.arxiv.org/html/2003.05503}{Bypassing memory safety mechanisms through speculative control flow hijacks} research paper and ALSR is criticized in the same way in \href{https://www.researchgate.net/publication/346588673_Speculative_Probing_Hacking_Blind_in_the_Spectre_Era}{Speculative\_Probing\_Hacking\_Blind\_in\_the\_Spectre\_Era}.
 The non executable stack forbids buffer overflow that aims at returning on the stack but more complex attacks will use the same idea (by calling a method in a library that contains a vulnerability, which with correct arguments, allows arbitrary code execution, or calling a method that is not supposed to be called at this point of the execution, causing chaos in the program) so to keep this example simple we will disable it.
 
 \begin{tcolorbox}[colback=gray!5!white, colframe=gray!75!black, title=Output on classic \Gls{risc-v} environment (No CHERI protection)]
@@ -1434,7 +1431,7 @@ buf: 0x7fffffffe0d0\\
 true return address: 0x7fffffffed0d0\\
 \$ 
 \end{tcolorbox}
-The "\$" symbol demonstrate access to a shell. For exemple using "ls" command will print files in current directory.
+The "\$" symbol demonstrate access to a shell. For example using "ls" command will print files in current directory.
 \subsubsection{CHERI protected Arm Morello Environment}
 On CHERI ARM \Gls{morello}, non executable stack is forbidden to execute. We will still try, because the fact the stack is non executable will not play a role in this program execution.
 \begin{tcolorbox}[colback=gray!5!white, colframe=blue!75!black, title=Execution on CHERI environment]
@@ -1465,8 +1462,8 @@ In-address space security exception
 Looking with \acrshort{gdb} we can see it is due to a Capability Tag fault which demonstrate that integer that can be cast into pointers are related to a capability tag.
 \subsection{Buffer Overflow over Vulnerable function pointer pointer followed by object duplication using Offset to identify method pointer}
 
-The main idea behind this exploit is that if CHERI protects against out of bounds and usage in read or write of invalid pointers, it does not protect against out of bounds inside a structure and it allows invalid pointers to access their address value, which can be used to calculate an offset. If the offset is used without more control after an overflow modifying its value, it can allow an attacker to perturb the normal execution behavior of a program.
-In order to illustrate this, I wrote the code of a vulnerable application that will be the target of an exploit, which theoretically allows an attacker to call any methods of an object, with some big assumptions about how the program is implemented and compiled: it requires a vulnerable structure with the possibility of a buffer overflow on a pointer on a function pointer inside the object, that can be called without control, the possibility of duplicating an object after a buffer overflow, and that the pointer on a function pointer value is calculated with an offset during the duplication. It also requires that the offset is calculated without further control of the result. 
+The main idea behind this attack is that if CHERI protects against out of bounds and usage in read or write of invalid pointers, it does not protect against out of bounds inside a structure and it allows invalid pointers to access their address value, which can be used to calculate an offset. If the offset is used without more control after an overflow modifying its value, it can allow an attacker to perturb the normal execution behavior of a program.
+In order to illustrate this, I wrote the code of a vulnerable application that will be the target of an exploit, in which case the exploit theoretically allows an attacker to call any methods of an object, with some big assumptions about how the program is implemented and compiled: it requires a vulnerable structure with the possibility of a buffer overflow on a pointer on a function pointer inside the object, that can be called without control, the possibility of duplicating an object after a buffer overflow, and that the pointer on a function pointer value is calculated with an offset during the duplication. It also requires that the offset is calculated without further control of the result. 
 CHERI protection can however easily mitigate this problem: using the option -Xclang -cheri-bounds=subobject-safe, the exploit can not happen. Any verification on either the offset value or the function call makes the exploit impossible to succeed.
 
 In order to run the exploit, we need all the files from this \href{https://github.com/pglbgit2/exploit.git}{directory}, then follow README instructions. The code is also fully present in annex.
@@ -1514,7 +1511,7 @@ He will first do a buffer overflow using the buffer that receive user input, all
 \end{tikzpicture}
 \end{center}
 The attacker knows he can not dereference pptr because it will lead to a security exception throw. However he can duplicate a structure.
-During the duplication, an offset is used to get the pointer to the function pointer. This is one exemple of an offset usage that can be used in a malicious case. In this case, as it is allowed, the pptr of the duplicated object is still valid.
+During the duplication, an offset is used to get the pointer to the function pointer. This is one example of an offset usage that can be used in a malicious case. In this case, as it is allowed, the pptr of the duplicated object is still valid.
 That means its possible to call the secret function from the duplicated object directly even if it was not supposed to happen in the original code.
 \lstinputlisting[numbers=none, firstline=100, lastline=118, caption=Duplication]{code/exploit.c}
 
@@ -1534,17 +1531,18 @@ That means its possible to call the secret function from the duplicated object d
 	\draw[->, thick, color=red] (0, -\boxheight*7/2) -- (-1, -\boxheight*7/2)-- (-1, -\boxheight*17/2)-- (0, -\boxheight*17/2);
 \end{tikzpicture}
 \end{center}
+The secret function allows the attacker to change the password, and thus, printing private information and having full control over the structure he duplicated.
 
-To conclude, this is one exemple of a usage of how a buffer overflow followed by the utilisation of an offset can be problematic.
-However, this exemple is still very unrealistic. C code isn't usually write like this and C++ class don't have attributes that are function pointer leading to their methods: they have a virtual method table that all instance of a class can access using a single pointer which is before all attributes. Meaning it would be impossible under CHERI protection to modify a method pointer. This could still be problematic if using a pointer to pointer as an attribute and calculating an offset with it, but it would be not probable that the exploit of such a vulnerability leads to arbitrary method execution, as in this case.
+To conclude, this is one example of a usage of how a buffer overflow followed by the use of an offset can be problematic.
+However, this example is still very unrealistic. C code isn't usually write like this and C++ class don't have attributes that are function pointer leading to their methods: they have a virtual method table that all instance of a class can access using a single pointer which is before all attributes. Meaning it would be impossible under CHERI protection to modify a method pointer. This could still be problematic if using a pointer to pointer as an attribute and calculating an offset with it, but it would be not probable that the exploit of such a vulnerability leads to arbitrary method call, as in this case.
 There are still two subtleties: even if a vulnerability exploit will fail, attackers can provoke faults at will, meaning handling of those faults have to be considered. If the usage of an offset between two pointer, one that could be overflowed, the application could encounter problems that are not handled, leading to DOS (Denial Of Service).
 
 
 \section{Cyberphys Demonstration}
 \subsection{Demonstration context}
-This application is positioned in an  context using a CAN data bus. The application controls a user's input (brakes, steering wheel) and must react accordingly. The data is transmitted via a CAN bus.
+This application is positioned in an  context using a CAN data bus. The application represent the ECU and controls user's input (brakes, steering wheel) and must react accordingly. The data is transmitted via a CAN bus.
 The application is coded entirely in C.
-It is assumed that an attacker has access to this data bus. The attack scenario under consideration poses problems of availability, integrity and confidentiality because the J1939 protocol used in this application is vulnerable to a buffer overflow attack, enabling the attacker, after successful exploitation of the vulnerability, to take total control of the vehicle, among other things. The demonstration shows that on a conventional system, the system is compromised, but on a system benefiting from CHERI protection, a security exception is lifted. \\
+It is assumed that an attacker has access to this data bus. The attack scenario under consideration poses problems of availability, integrity and confidentiality because the J1939 protocol used in this application is vulnerable to a buffer overflow attack, enabling the attacker, after successful exploitation of the vulnerability, to take total control of the vehicle. The demonstration shows that on a conventional system, the system is compromised, but on a system benefiting from CHERI protection, a security exception is lifted. \\
 The application runs in two environments: a FreeRTOS system on RISC-V architecture and a CHERI-FreeRTOS system on CHERI-RISC-V architecture. The application is called Cyberphys.
 \begin{figure}
         \begin{center}
@@ -1580,11 +1578,12 @@ The application runs in two environments: a FreeRTOS system on RISC-V architectu
 \end{figure}
 
 \subsection{Demonstration Theory}
-A remark raised by Dr. Hesham Almatory in his thesis \cite{almatary2022compartos} is that the raising of an exception effectively prevents the exploitation of a vulnerability aimed at a subtle objective such as the execution of arbitrary code, but does not prevent the \Gls{dos}.
+A remark by Dr. Hesham Almatory in his thesis \cite{almatary2022compartos} is that the raising of an exception effectively prevents the exploitation of a vulnerability aimed at a subtle objective such as the execution of arbitrary code, but does not prevent the \Gls{dos}.
 In other words, the system is not corrupted (the integrity and confidentiality of the system are preserved) when a security exception is raised, but stopped (availability is non-existent). Losing control of a vehicle can be problematic for a number of obvious reasons. Dr Hesham Almatory's first solution, which he describes as naive, is to restart the entire system. According to his experiments, this takes approximately two seconds. That may not sound like much, but in an emergency braking situation it can be problematic. This could be a scenario involving multiples attacks: the attacker can carry out his attack in a loop and force an immediate reboot as soon as the system becomes functional again. 
-The second solution proposed by Dr Hesham consists of compartmentalising the application using a method of his own invention called CompartOS, which is based on CHERI capabilities and is carried out automatically during the linking stage carried out by the compiler. Three solutions are proposed: restarting the offending compartment (requires minimal implementation effort, but is not always possible), modifying the code to include error handling (requires a small implementation effort but requires knowledge of the errors that can be handled) or 'killing' the compartment (this solution is only possible in cases where the compartment is not crucial, such as a music player). Depending on the type of problem, each of the three solutions may be necessary. In this case, error handling is used.
+The second solution proposed by Dr Hesham consists of compartmentalising the application using a method of his own invention called CompartOS, which is based on CHERI capabilities and is carried out automatically during the linking stage carried out by the compiler. Four solutions are proposed: restarting the offending compartment (requires minimal implementation effort, but is not always possible, it requires to be able to create snapshots of a compartment and restore it), modifying the code to include error handling (requires a small implementation effort but requires knowledge of the errors that can be handled), using a handler function (that requires knowing what the problematic elements are, to free them and realocate them) or 'killing' the compartment (this solution is only possible in cases where the compartment is not crucial, such as a music player). Depending on the type of problem, each of the four solutions may be necessary. In this case, the handling function is called.
+To catch security exception thrown by the hardware, Dr Hesham had to modify the CHERI-FreeRTOS kernel : when a architectural exception is thrown it is catched by the OS, who print the fault but more importantly forward the fault to a software handler which is in this case the compartment handler identified by its name (CheriFreeRTOS\_FaultHandler), and if not found, uses return error, compartment kill or micro reboot depending on the option given to compartmentalize (by default it is return error).
 
-By using simple error handling, consisting of stopping only the faulty compartment and recreating it in another memory area, the compartment returns to a functional state in thirty micro-seconds, however, the allocated memory is not released and this can lead to a exhaustion of memory ressources in the long term. With a little implementation effort, it is possible to specify the release of allocated memory and thus avoid the backlog. This takes sixty microseconds. In this way, system availability is maintained and the effectiveness of CompartOS based on CHERI protections is demonstrated.
+By using simple function handling, consisting of allocating again the corrupted buffer in another memory area, the compartment returns to a functional state in thirty micro-seconds, however, the previous allocated memory is not released and this can lead to a exhaustion of memory resources in the long term. With a little implementation effort, it is possible to specify the release of allocated memory and thus avoid the backlog. This takes sixty microseconds. In this way, system availability is maintained and the effectiveness of CompartOS based on CHERI protections is demonstrated.
 The application used in the demonstration is not complete (it does not simulate all the components of a vehicle): it is a simplified version comprising only the management of data from the CAN bus, using the J1939 protocol, as well as a task updating the information received from the sensors (non-existent in this case). The aim is simply to demonstrate the presence and possible exploitation of a buffer overflow without the CHERI protection.
 
 \newcommand{\drawstack}[3]{
@@ -1599,7 +1598,7 @@ The application used in the demonstration is not complete (it does not simulate 
 
         \node at (#1+2,#2+0.5) {...};
         \node at (2+#1,#2+7.5) {...};
-        \node at (2+#1,6.5+#2) {buffer global};
+        \node at (2+#1,6.5+#2) {global buffer};
         \node at (2+#1,1.5+#2) {vulnerable buffer};
         \node at (2+#1,#2+5.5) {...};
 }
@@ -1649,7 +1648,7 @@ When the \ref{fig:demo_paquet} message is received, it is reconstituted from the
                         \drawdemostack{0}{0}
                         \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 5) -- (0, 8) node [black,midway,xshift=-2.5cm] {Global Variables};
                         \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 1) -- (0, 4) node [black,midway,xshift=-2.5cm] {Tasks Memory};
-                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 0) -- (0, 1) node [black,midway,xshift=-2.4cm] {Unused Mmeory};
+                        \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 0) -- (0, 1) node [black,midway,xshift=-2.4cm] {Unused Memory};
                 \end{tikzpicture}
         \end{center}
         \caption{Demonstration: First Buffer Overflow} 
@@ -1659,13 +1658,12 @@ When the \ref{fig:demo_paquet} message is received, it is reconstituted from the
 
 The first buffer overflow \ref{fig:demo_overflow} occurs when the buffer in which the function implementing the J1939 protocol copies the entire received message without checking its size. On a conventional FreeRTOS system, the buffer overflow goes unnoticed.
 On a CHERI-FreeRTOS system, the buffer overflow attempt will raise a security exception due to the buffer being bound. On a compartmentalised system, the error handling will call a handler which will free the memory used by the protocol and instantiate it again.
-
 \begin{figure}
         \begin{center}
                 \begin{tikzpicture}[scale=0.75]
                         \draw[->] (4,1.5) -- (5,1.5) -- (5,6.5) -- (5,6.5) -- (4,6.5);
-*                        \fill [red] (0,0) rectangle (4,2);
-*                        \fill [red] (0,7) rectangle (4,5);
+                        \fill [red] (0,0) rectangle (4,2);
+                        \fill [red] (0,7) rectangle (4,5);
 
                         \drawdemostack{0}{0}
                         \draw [decorate,decoration={brace,amplitude=10pt,raise=5pt}] (0, 5) -- (0, 8) node [black,midway,xshift=-2.5cm] {Global Variables};
@@ -1685,7 +1683,6 @@ The next step, when the buffer is copied to a global variable in an uncontrolled
         \node at (#1+2.5,0.5) {#3};
         \node at (#1+2.5,1.5) {#4};
         \node at (#1+2.5,2.5) {#5};
-
 }
 \begin{figure}
         \begin{center}
@@ -1713,6 +1710,8 @@ The next step, when the buffer is copied to a global variable in an uncontrolled
 
                         \node at (0,-2) {Clang version 13};
                         \node[align=center] at (6,-8) {Debogger GDB\\ (RISC-V architecture)};
+                		\draw (3.5,-9) rectangle (8.5,-7.25);
+
                         \node at (11,-2) {QEMU};
                         \node[brown] at (0.6,-7) {emulates using cross-compiled binaries};
                         \node[green] at (-1.5,-9) {build and run tools};
@@ -1733,18 +1732,21 @@ The demonstration is build using \href{https://github.com/CTSRD-CHERI/cheribuild
 
 
 \subsection{Demonstration Reproduction}
+The demonstration's application code is in FreeRTOS/Demo/RISC-V-Generic/demo/cyberphys and FreeRTOS/Demo/RISC-V\_Galois\_demo/cyberphys repository.
 \lstinputlisting[numbers=none, caption=,language=bash, lastline=90]{code/CHERI_FREERTOS_DEMO.sh}
 
-Its possible to modify the attack code in many ways: augmenting the size of the buffer and the send length, sending multiple message in a loop (requiring a minimum delay to avoid DOS on your own computer).
-To exit QEMU, use: Ctr\^a+x.
-When running the attack code on a FreeRTOS environment, the expected output is that the message will be received with (recv\_can\_message) prints, then the programm will stop. Its possible to add additional prints to have more information. The code to modify is on ~\/cheri\/freertos\/FreeRTOS\/Demo\/Risc-V-Generic\/demo\/cyberphys\/ .
-When running on a CHERI-FreeRTOS environment, if using debug mode, a security exception will be printed, otherwise the same result as from the FreeRTOS environment will be observed.
-When running on a compartmentalized CHERI-FreeRTOS environment,, a seccurity exception will be printed, and the program will continue running after handling the error using the handling function in j1939.c file. It will, as explained in the theory section, free the corrupted buffer and allocate it again.
+Its possible to modify the attack code in many ways: augmenting the size of the buffer and the send length, sending multiple message in a loop (requiring a minimum delay to avoid DOS on your own computer, and avoid sending too many paquets at the same time, because they will cause the emulation to crash).
+To exit QEMU, use: Ctrl+a+x.
+When running the attack code on a FreeRTOS environment, the expected output is that the message will be received with (recv\_can\_message) prints, then the program will stop. Its possible to add additional prints to have more information. The code to modify is on ~/cheri/freertos/FreeRTOS/Demo/Risc-V-Generic/demo/cyberphys/ .
+On a CHERI-FreeRTOS environment, if using debug mode, a security exception will be printed, otherwise the same result as from the FreeRTOS environment will be observed.
+On a compartmentalized CHERI-FreeRTOS environment, a security exception will be printed \ref{sec:cyberphys-error}, and the program will continue running after handling the error using the handling function in j1939.c file. It will, as explained in the theory section, free the corrupted buffer and allocate it again.
 \begin{figure}[h!]
 	\includegraphics[scale=0.4]{images/SecurityException.png}
 	\caption{Security Exception under Compartmentalised Cheri-FreeRTOS Execution}
 	\label{sec:cyberphys-error}
 \end{figure}
+
+The fact the program resume after handling a fault is a proof that the availability of the system is maintained. The fault is a proof that the integrity and confidentiality of the system are maintained.
 \clearpage 
 \bibliographystyle{plain}
 \bibliography{source}
@@ -1753,7 +1755,7 @@ When running on a compartmentalized CHERI-FreeRTOS environment,, a seccurity exc
 \clearpage 
 \appendix
 \section{Annex 1: Exploit Code}
-This code can also be found \href{https://github.com/pglbgit2/Explanations.git}{here}
+This code can also be found \href{https://github.com/pglbgit2/exploit.git}{here}
 \lstinputlisting[numbers=none, caption=exploit.c]{code/exploit.c}
 
 \lstset{ % Define settings for the listings package
